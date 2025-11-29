@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { SafeUser } from '../users/users.service';
 import { MeetingService } from './meeting.service';
 
 @Injectable()
@@ -8,11 +9,15 @@ export class StubMeetingService implements MeetingService {
 
   constructor(private readonly configService: ConfigService) {}
 
-  async createMeeting(params: { startAt: Date; endAt: Date; title?: string }) {
+  async createMeeting(_: SafeUser, params: { startAt: Date; endAt: Date; title?: string; attendees?: string[] }) {
     const domain = this.configService.get<string>('MEET_DOMAIN') ?? 'https://meet.google.com';
     const slug = this.generateSlug();
     const meetUrl = `${domain.replace(/\/$/, '')}/${slug}`;
-    this.logger.log(`(Stub) Generated Meet URL ${meetUrl} for "${params.title ?? 'Coaching Session'}"`);
+    this.logger.log(
+      `(Stub) Generated Meet URL ${meetUrl} for "${params.title ?? 'Coaching Session'}" with attendees ${
+        params.attendees?.join(', ') ?? 'none'
+      }`,
+    );
     return {
       meetUrl,
       externalId: `stub-${Date.now()}`,
@@ -28,4 +33,3 @@ export class StubMeetingService implements MeetingService {
     return `${random()}-${random()}-${random()}`;
   }
 }
-

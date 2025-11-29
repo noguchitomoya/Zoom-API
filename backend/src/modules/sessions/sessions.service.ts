@@ -51,13 +51,17 @@ export class SessionsService {
 
     let meeting;
     try {
-      meeting = await this.meetingService.createMeeting({
+      meeting = await this.meetingService.createMeeting(coach, {
         startAt,
         endAt,
         title: dto.title ?? `Coaching with ${student.name}`,
+        attendees: [student.email],
       });
     } catch (error) {
       this.logger.error('Meet生成に失敗しました', error instanceof Error ? error.stack : undefined);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       throw new InternalServerErrorException('Meetリンクの作成に失敗しました。時間をおいて再度お試しください。');
     }
 

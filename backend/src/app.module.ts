@@ -7,6 +7,7 @@ import { SessionsModule } from './modules/sessions/sessions.module';
 import { StudentsModule } from './modules/students/students.module';
 import { UsersModule } from './modules/users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { GoogleModule } from './modules/google/google.module';
 
 @Module({
   imports: [
@@ -17,10 +18,10 @@ import { PrismaModule } from './prisma/prisma.module';
     UsersModule,
     AuthModule,
     StudentsModule,
+    GoogleModule,
     MeetingModule,
     MailModule,
     SessionsModule,
   ],
 })
 export class AppModule {}
-

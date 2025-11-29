@@ -1,69 +1,53 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { google, calendar_v3 } from 'googleapis';
 import { GaxiosError } from 'googleapis-common';
-import { JWT } from 'google-auth-library';
+import { SafeUser } from '../users/users.service';
 import { MeetingService } from './meeting.service';
+import { GoogleOauthService } from '../google/google-oauth.service';
 
 @Injectable()
 export class GoogleMeetingService implements MeetingService {
   private readonly logger = new Logger(GoogleMeetingService.name);
-  private readonly calendar: calendar_v3.Calendar;
-  private readonly calendarId: string | null;
-  private readonly isReady: boolean;
+  private readonly timeZone: string;
 
-  constructor(private readonly configService: ConfigService) {
-    const clientEmail = configService.get<string>('GOOGLE_SERVICE_ACCOUNT_EMAIL');
-    const privateKey = configService.get<string>('GOOGLE_SERVICE_ACCOUNT_KEY');
-    this.calendarId = this.normalize(configService.get<string>('GOOGLE_CALENDAR_ID')) ?? null;
-    const subject = this.normalize(configService.get<string>('GOOGLE_IMPERSONATED_USER'));
-
-    if (!clientEmail || !privateKey || !this.calendarId) {
-      this.logger.warn('Google Meeting integration is not fully configured. Falling back to stub service.');
-      this.isReady = false;
-      this.calendar = google.calendar({ version: 'v3' });
-      return;
-    }
-
-    const jwtClient = new JWT({
-      email: clientEmail,
-      key: privateKey.replace(/\\n/g, '\n'),
-      scopes: ['https://www.googleapis.com/auth/calendar'],
-      subject,
-    });
-
-    this.calendar = google.calendar({ version: 'v3', auth: jwtClient });
-    this.isReady = true;
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly googleOauthService: GoogleOauthService,
+  ) {
+    this.timeZone = this.configService.get<string>('GOOGLE_CALENDAR_TIMEZONE') ?? 'Asia/Tokyo';
   }
 
-  async createMeeting(params: { startAt: Date; endAt: Date; title?: string }) {
-    if (!this.isReady || !this.calendarId) {
-      throw new Error('Google Meet integration is not configured.');
+  async createMeeting(coach: SafeUser, params: { startAt: Date; endAt: Date; title?: string; attendees?: string[] }) {
+    const { authClient, calendarId } = await this.googleOauthService.getAuthorizedClient(coach.id);
+    if (!calendarId) {
+      throw new BadRequestException('Googleカレンダーが設定されていません。');
     }
 
-    const timeZone = this.normalize(this.configService.get<string>('GOOGLE_CALENDAR_TIMEZONE')) ?? 'Asia/Tokyo';
+    const calendar = google.calendar({ version: 'v3', auth: authClient });
 
     const requestBody: calendar_v3.Schema$Event = {
       summary: params.title ?? 'Online Coaching Session',
       start: {
         dateTime: params.startAt.toISOString(),
-        timeZone,
+        timeZone: this.timeZone,
       },
       end: {
         dateTime: params.endAt.toISOString(),
-        timeZone,
+        timeZone: this.timeZone,
       },
       conferenceData: {
         createRequest: {
           requestId: `meet-${Date.now()}`,
         },
       },
+      attendees: params.attendees?.map((email) => ({ email })),
     };
 
     let response;
     try {
-      response = await this.calendar.events.insert({
-        calendarId: this.calendarId,
+      response = await calendar.events.insert({
+        calendarId,
         requestBody,
         conferenceDataVersion: 1,
         sendUpdates: 'none',
@@ -90,12 +74,5 @@ export class GoogleMeetingService implements MeetingService {
       meetUrl,
       externalId: event.id,
     };
-  }
-  private normalize(value?: string | null) {
-    if (!value) {
-      return undefined;
-    }
-    const trimmed = value.trim();
-    return trimmed.length ? trimmed : undefined;
   }
 }
