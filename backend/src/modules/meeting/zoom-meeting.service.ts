@@ -148,5 +148,3 @@ export class ZoomMeetingService implements MeetingService {
     this.logger.error(`${prefix}${status ? ` (${status})` : ''}: ${JSON.stringify(data ?? error.message)}`);
   }
 }
-
-

@@ -1,10 +1,4 @@
 -- CreateEnum
-CREATE TYPE "UserRole" AS ENUM ('coach', 'admin');
-
--- CreateEnum
-CREATE TYPE "UserStatus" AS ENUM ('active', 'inactive');
-
--- CreateEnum
 CREATE TYPE "SessionStatus" AS ENUM ('scheduled', 'completed', 'cancelled');
 
 -- CreateEnum
@@ -13,12 +7,10 @@ CREATE TYPE "EmailStatus" AS ENUM ('success', 'failed');
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
-    "employeeNumber" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "email" TEXT NOT NULL,
-    "role" "UserRole" NOT NULL DEFAULT 'coach',
     "passwordHash" TEXT NOT NULL,
-    "status" "UserStatus" NOT NULL DEFAULT 'active',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -26,23 +18,24 @@ CREATE TABLE "User" (
 );
 
 -- CreateTable
-CREATE TABLE "Student" (
+CREATE TABLE "Customer" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "email" TEXT NOT NULL,
+    "passwordHash" TEXT NOT NULL,
+    "phone" TEXT,
     "note" TEXT,
-    "createdByUserId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "Student_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Customer_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Session" (
     "id" TEXT NOT NULL,
-    "studentId" TEXT NOT NULL,
-    "coachId" TEXT NOT NULL,
+    "customerId" TEXT NOT NULL,
+    "staffId" TEXT NOT NULL,
     "startAt" TIMESTAMP(3) NOT NULL,
     "endAt" TIMESTAMP(3) NOT NULL,
     "status" "SessionStatus" NOT NULL DEFAULT 'scheduled',
@@ -70,28 +63,28 @@ CREATE TABLE "EmailLog" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_employeeNumber_key" ON "User"("employeeNumber");
+CREATE UNIQUE INDEX "User_code_key" ON "User"("code");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
-CREATE INDEX "Student_createdByUserId_email_idx" ON "Student"("createdByUserId", "email");
+CREATE UNIQUE INDEX "Customer_email_key" ON "Customer"("email");
 
 -- CreateIndex
-CREATE INDEX "Session_coachId_startAt_idx" ON "Session"("coachId", "startAt");
+CREATE INDEX "Session_staffId_startAt_idx" ON "Session"("staffId", "startAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Session_staffId_startAt_key" ON "Session"("staffId", "startAt");
 
 -- CreateIndex
 CREATE INDEX "EmailLog_sessionId_idx" ON "EmailLog"("sessionId");
 
 -- AddForeignKey
-ALTER TABLE "Student" ADD CONSTRAINT "Student_createdByUserId_fkey" FOREIGN KEY ("createdByUserId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Session" ADD CONSTRAINT "Session_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Session" ADD CONSTRAINT "Session_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Session" ADD CONSTRAINT "Session_coachId_fkey" FOREIGN KEY ("coachId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Session" ADD CONSTRAINT "Session_staffId_fkey" FOREIGN KEY ("staffId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "EmailLog" ADD CONSTRAINT "EmailLog_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "Session"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

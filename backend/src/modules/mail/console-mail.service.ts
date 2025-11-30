@@ -13,18 +13,17 @@ export class ConsoleMailService implements MailService {
 
   async sendSessionNotification(params: {
     to: string;
-    studentName: string;
-    coachName: string;
+    customerName: string;
+    staffName: string;
     startAt: string;
     endAt: string;
     meetUrl: string;
     title?: string;
   }) {
     this.logger.log(
-      `Sending session email from ${this.fromAddress} to ${params.to} for ${params.studentName} (${params.startAt} - ${params.endAt})`,
+      `Sending session email from ${this.fromAddress} to ${params.to} for ${params.customerName} (${params.startAt} - ${params.endAt}) with ${params.staffName}`,
     );
     this.logger.debug(`Zoom URL: ${params.meetUrl}`);
     return { success: true };
   }
 }
-

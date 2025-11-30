@@ -2,20 +2,19 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { SafeUser, UsersService } from '../../users/users.service';
+import { CustomersService, SafeCustomer } from '../../customers/customers.service';
 
 interface JwtPayload {
   sub: string;
-  role: string;
-  employeeNumber: string;
   name: string;
+  email: string;
 }
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private readonly configService: ConfigService,
-    private readonly usersService: UsersService,
+    private readonly customersService: CustomersService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -24,12 +23,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: JwtPayload): Promise<SafeUser> {
-    const user = await this.usersService.findById(payload.sub);
-    if (!user) {
+  async validate(payload: JwtPayload): Promise<SafeCustomer> {
+    const customer = await this.customersService.findById(payload.sub);
+    if (!customer) {
       return null;
     }
-    return this.usersService.sanitize(user);
+    return this.customersService.sanitize(customer);
   }
 }
-

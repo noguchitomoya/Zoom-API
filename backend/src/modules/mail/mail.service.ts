@@ -1,8 +1,8 @@
 export interface MailService {
   sendSessionNotification(params: {
     to: string;
-    studentName: string;
-    coachName: string;
+    customerName: string;
+    staffName: string;
     startAt: string;
     endAt: string;
     meetUrl: string;
@@ -11,4 +11,3 @@ export interface MailService {
 }
 
 export const MAIL_SERVICE = Symbol('MAIL_SERVICE');
-

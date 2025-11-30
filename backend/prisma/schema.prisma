@@ -7,16 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  coach
-  admin
-}
-
-enum UserStatus {
-  active
-  inactive
-}
-
 enum SessionStatus {
   scheduled
   completed
@@ -29,39 +19,32 @@ enum EmailStatus {
 }
 
 model User {
-  id               String    @id @default(cuid())
-  employeeNumber   String    @unique
-  name             String
-  email            String    @unique
-  role             UserRole  @default(coach)
-  passwordHash     String
-  status           UserStatus @default(active)
-  googleRefreshToken String?  @db.Text
-  googleCalendarId   String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  students         Student[] @relation("UserStudents")
-  coachedSessions  Session[] @relation("CoachSessions")
+  id           String   @id @default(cuid())
+  code         String   @unique
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  sessions     Session[]
 }
 
-model Student {
-  id               String    @id @default(cuid())
-  name             String
-  email            String
-  note             String?
-  createdByUserId  String
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  createdByUser    User      @relation("UserStudents", fields: [createdByUserId], references: [id])
-  sessions         Session[]
-
-  @@index([createdByUserId, email])
+model Customer {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  phone        String?
+  note         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  sessions     Session[]
 }
 
 model Session {
   id          String        @id @default(cuid())
-  studentId   String
-  coachId     String
+  customerId  String
+  staffId     String
   startAt     DateTime
   endAt       DateTime
   status      SessionStatus @default(scheduled)
@@ -70,11 +53,12 @@ model Session {
   title       String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
-  student     Student       @relation(fields: [studentId], references: [id])
-  coach       User          @relation("CoachSessions", fields: [coachId], references: [id])
+  customer    Customer      @relation(fields: [customerId], references: [id])
+  staff       User          @relation(fields: [staffId], references: [id])
   emailLogs   EmailLog[]
 
-  @@index([coachId, startAt])
+  @@index([staffId, startAt])
+  @@unique([staffId, startAt])
 }
 
 model EmailLog {

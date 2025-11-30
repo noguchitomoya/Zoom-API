@@ -1,56 +1,55 @@
-import { InternalServerErrorException } from '@nestjs/common';
-import { EmailStatus } from '@prisma/client';
+import { BadRequestException } from '@nestjs/common';
+import { SessionStatus } from '@prisma/client';
 import { SessionsService } from '../../src/modules/sessions/sessions.service';
-import { StudentsService } from '../../src/modules/students/students.service';
 import { MailService } from '../../src/modules/mail/mail.service';
 import { MeetingService } from '../../src/modules/meeting/meeting.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
-import { SafeUser } from '../../src/modules/users/users.service';
+import { SafeCustomer } from '../../src/modules/customers/customers.service';
+import { SafeUser, UsersService } from '../../src/modules/users/users.service';
 
-const coach: SafeUser = {
-  id: 'coach-1',
-  employeeNumber: 'E0001',
-  name: 'Coach',
-  email: 'coach@example.com',
-  role: 'coach',
-  status: 'active',
+const customer: SafeCustomer = {
+  id: 'cust-1',
+  name: '山田太郎',
+  email: 'customer@example.com',
+  phone: null,
+  note: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
 
-const student = {
-  id: 'stu-1',
-  name: 'Student',
-  email: 'student@example.com',
-  createdByUserId: coach.id,
-  note: null,
+const staff: SafeUser = {
+  id: 'staff-1',
+  code: 'STAFF_A',
+  name: '担当A',
+  email: 'staff-a@example.com',
   createdAt: new Date(),
   updatedAt: new Date(),
 };
 
 const sessionRecord = {
   id: 'session-1',
-  studentId: student.id,
-  coachId: coach.id,
-  startAt: new Date(),
-  endAt: new Date(Date.now() + 3_600_000),
-  status: 'scheduled',
-  meetUrl: 'https://meet.google.com/abc-defg',
-  externalId: 'stub',
-  title: 'Demo',
+  customerId: customer.id,
+  staffId: staff.id,
+  startAt: new Date('2025-12-01T01:00:00.000Z'),
+  endAt: new Date('2025-12-01T02:00:00.000Z'),
+  status: SessionStatus.scheduled,
+  meetUrl: 'https://zoom.us/j/123456789',
+  externalId: 'zoom-1',
+  title: 'テスト',
   createdAt: new Date(),
   updatedAt: new Date(),
-  student: {
-    id: student.id,
-    name: student.name,
-    email: student.email,
+  staff: {
+    id: staff.id,
+    code: staff.code,
+    name: staff.name,
+    email: staff.email,
   },
 };
 
 describe('SessionsService (unit)', () => {
   let service: SessionsService;
   let prisma: jest.Mocked<Pick<PrismaService, 'session' | 'emailLog'>>;
-  let studentsService: jest.Mocked<StudentsService>;
+  let usersService: jest.Mocked<UsersService>;
   let meetingService: jest.Mocked<MeetingService>;
   let mailService: jest.Mocked<MailService>;
 
@@ -58,16 +57,21 @@ describe('SessionsService (unit)', () => {
     prisma = {
       session: {
         create: jest.fn().mockResolvedValue(sessionRecord),
-        findMany: jest.fn(),
+        update: jest.fn().mockResolvedValue({ ...sessionRecord, status: SessionStatus.cancelled }),
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
+        findUnique: jest.fn().mockResolvedValue(sessionRecord),
       },
       emailLog: {
         create: jest.fn(),
       },
     } as unknown as jest.Mocked<Pick<PrismaService, 'session' | 'emailLog'>>;
 
-    studentsService = {
-      ensureStudentOwnedByCoach: jest.fn().mockResolvedValue(student),
-    } as unknown as jest.Mocked<StudentsService>;
+    usersService = {
+      findById: jest.fn().mockResolvedValue({ ...staff, passwordHash: '' } as any),
+      sanitize: jest.fn().mockImplementation((value) => value as SafeUser),
+      listAll: jest.fn().mockResolvedValue([{ ...staff, passwordHash: '' } as any]),
+    } as unknown as jest.Mocked<UsersService>;
 
     meetingService = {
       createMeeting: jest.fn().mockResolvedValue({
@@ -82,60 +86,37 @@ describe('SessionsService (unit)', () => {
 
     service = new SessionsService(
       prisma as unknown as PrismaService,
-      studentsService,
+      usersService,
       meetingService,
       mailService,
     );
   });
 
-  it('persists session and email log for happy path', async () => {
-    const result = await service.createSession(coach, {
-      studentId: student.id,
-      startAt: new Date().toISOString(),
-      endAt: new Date(Date.now() + 3_600_000).toISOString(),
-      title: 'Weekly coaching',
-    });
+  it('creates a new reservation', async () => {
+    const iso = '2025-12-01T10:00:00+09:00';
+    const result = await service.createSession(customer, { staffId: staff.id, startAt: iso, title: '面談' });
 
     expect(prisma.session.create).toHaveBeenCalled();
-    expect(prisma.emailLog.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          status: EmailStatus.success,
-          toEmail: student.email,
-        }),
-      }),
+    expect(meetingService.createMeeting).toHaveBeenCalled();
+    expect(mailService.sendSessionNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ customerName: customer.name, staffName: staff.name }),
     );
-    expect(result.emailStatus).toBe(EmailStatus.success);
+    expect(result).toEqual(sessionRecord);
   });
 
-  it('records failed email status when mail service throws', async () => {
-    mailService.sendSessionNotification.mockRejectedValueOnce(new Error('smtp down'));
-
-    const result = await service.createSession(coach, {
-      studentId: student.id,
-      startAt: new Date().toISOString(),
-      endAt: new Date(Date.now() + 3_600_000).toISOString(),
-      title: 'Weekly coaching',
-    });
-
-    expect(result.emailStatus).toBe(EmailStatus.failed);
-    expect(prisma.emailLog.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ status: EmailStatus.failed }),
-      }),
-    );
-  });
-
-  it('throws 500 when meeting generation fails', async () => {
-    meetingService.createMeeting.mockRejectedValueOnce(new Error('google down'));
+  it('prevents double booking', async () => {
+    prisma.session.findFirst.mockResolvedValueOnce(sessionRecord);
 
     await expect(
-      service.createSession(coach, {
-        studentId: student.id,
-        startAt: new Date().toISOString(),
-        endAt: new Date(Date.now() + 3_600_000).toISOString(),
-        title: 'Weekly coaching',
-      }),
-    ).rejects.toBeInstanceOf(InternalServerErrorException);
+      service.createSession(customer, { staffId: staff.id, startAt: '2025-12-01T10:00:00+09:00' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('cancels a reservation', async () => {
+    const result = await service.cancelSession(customer, sessionRecord.id);
+    expect(prisma.session.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { status: SessionStatus.cancelled } }),
+    );
+    expect(result.status).toBe(SessionStatus.cancelled);
   });
 });

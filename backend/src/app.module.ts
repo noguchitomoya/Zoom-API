@@ -4,7 +4,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { MailModule } from './modules/mail/mail.module';
 import { MeetingModule } from './modules/meeting/meeting.module';
 import { SessionsModule } from './modules/sessions/sessions.module';
-import { StudentsModule } from './modules/students/students.module';
+import { CustomersModule } from './modules/customers/customers.module';
 import { UsersModule } from './modules/users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
 
@@ -15,8 +15,8 @@ import { PrismaModule } from './prisma/prisma.module';
     }),
     PrismaModule,
     UsersModule,
+    CustomersModule,
     AuthModule,
-    StudentsModule,
     MeetingModule,
     MailModule,
     SessionsModule,

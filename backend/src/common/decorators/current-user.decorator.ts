@@ -1,10 +1,9 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { SafeUser } from '../../modules/users/users.service';
+import { SafeCustomer } from '../../modules/customers/customers.service';
 
-export const CurrentUser = createParamDecorator(
-  (_: unknown, ctx: ExecutionContext): SafeUser => {
+export const CurrentCustomer = createParamDecorator(
+  (_: unknown, ctx: ExecutionContext): SafeCustomer => {
     const request = ctx.switchToHttp().getRequest();
-    return request.user as SafeUser;
+    return request.user as SafeCustomer;
   },
 );
-
