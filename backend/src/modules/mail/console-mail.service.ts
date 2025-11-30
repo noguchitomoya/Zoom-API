@@ -23,7 +23,7 @@ export class ConsoleMailService implements MailService {
     this.logger.log(
       `Sending session email from ${this.fromAddress} to ${params.to} for ${params.studentName} (${params.startAt} - ${params.endAt})`,
     );
-    this.logger.debug(`Meet URL: ${params.meetUrl}`);
+    this.logger.debug(`Zoom URL: ${params.meetUrl}`);
     return { success: true };
   }
 }

@@ -10,11 +10,11 @@ export class StubMeetingService implements MeetingService {
   constructor(private readonly configService: ConfigService) {}
 
   async createMeeting(_: SafeUser, params: { startAt: Date; endAt: Date; title?: string; attendees?: string[] }) {
-    const domain = this.configService.get<string>('MEET_DOMAIN') ?? 'https://meet.google.com';
-    const slug = this.generateSlug();
-    const meetUrl = `${domain.replace(/\/$/, '')}/${slug}`;
+    const domain = this.configService.get<string>('ZOOM_MEETING_DOMAIN') ?? 'https://zoom.us/j';
+    const meetingId = this.generateMeetingId();
+    const meetUrl = `${domain.replace(/\/$/, '')}/${meetingId}`;
     this.logger.log(
-      `(Stub) Generated Meet URL ${meetUrl} for "${params.title ?? 'Coaching Session'}" with attendees ${
+      `(Stub) Generated Zoom URL ${meetUrl} for "${params.title ?? 'Coaching Session'}" with attendees ${
         params.attendees?.join(', ') ?? 'none'
       }`,
     );
@@ -24,12 +24,10 @@ export class StubMeetingService implements MeetingService {
     };
   }
 
-  private generateSlug() {
-    const charset = 'abcdefghijklmnopqrstuvwxyz';
-    const random = () =>
-      Array.from({ length: 3 })
-        .map(() => charset[Math.floor(Math.random() * charset.length)])
-        .join('');
-    return `${random()}-${random()}-${random()}`;
+  private generateMeetingId() {
+    const digits = '0123456789';
+    return Array.from({ length: 11 })
+      .map(() => digits[Math.floor(Math.random() * digits.length)])
+      .join('');
   }
 }

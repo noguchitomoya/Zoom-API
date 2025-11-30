@@ -58,11 +58,11 @@ export class SessionsService {
         attendees: [student.email],
       });
     } catch (error) {
-      this.logger.error('Meet生成に失敗しました', error instanceof Error ? error.stack : undefined);
+      this.logger.error('Zoomミーティングの作成に失敗しました', error instanceof Error ? error.stack : undefined);
       if (error instanceof BadRequestException) {
         throw error;
       }
-      throw new InternalServerErrorException('Meetリンクの作成に失敗しました。時間をおいて再度お試しください。');
+      throw new InternalServerErrorException('Zoomリンクの作成に失敗しました。時間をおいて再度お試しください。');
     }
 
     const session = await this.prisma.session.create({

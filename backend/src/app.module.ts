@@ -7,7 +7,6 @@ import { SessionsModule } from './modules/sessions/sessions.module';
 import { StudentsModule } from './modules/students/students.module';
 import { UsersModule } from './modules/users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
-import { GoogleModule } from './modules/google/google.module';
 
 @Module({
   imports: [
@@ -18,7 +17,6 @@ import { GoogleModule } from './modules/google/google.module';
     UsersModule,
     AuthModule,
     StudentsModule,
-    GoogleModule,
     MeetingModule,
     MailModule,
     SessionsModule,

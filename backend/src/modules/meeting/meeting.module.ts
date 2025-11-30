@@ -1,25 +1,22 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { GoogleModule } from '../google/google.module';
-import { GoogleOauthService } from '../google/google-oauth.service';
-import { GoogleMeetingService } from './google-meeting.service';
+import { ZoomMeetingService } from './zoom-meeting.service';
 import { StubMeetingService } from './stub-meeting.service';
 import { MEETING_SERVICE, MeetingService } from './meeting.service';
 
 @Module({
-  imports: [ConfigModule, GoogleModule],
+  imports: [ConfigModule],
   providers: [
-    GoogleMeetingService,
+    ZoomMeetingService,
     StubMeetingService,
     {
       provide: MEETING_SERVICE,
-      inject: [GoogleOauthService, GoogleMeetingService, StubMeetingService],
+      inject: [ZoomMeetingService, StubMeetingService],
       useFactory: (
-        googleOauthService: GoogleOauthService,
-        googleMeetingService: GoogleMeetingService,
+        zoomMeetingService: ZoomMeetingService,
         stubMeetingService: StubMeetingService,
       ): MeetingService => {
-        return googleOauthService.isEnabled() ? googleMeetingService : stubMeetingService;
+        return zoomMeetingService.isEnabled() ? zoomMeetingService : stubMeetingService;
       },
     },
   ],
